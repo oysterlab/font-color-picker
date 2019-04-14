@@ -1,86 +1,123 @@
-document.body.style.padding = '0px'
-document.body.style.maring = '0px'
-const WIDTH = window.innerWidth
-const HEIGHT = window.innerHeight
-const canvas = document.createElement('canvas')
-canvas.width = WIDTH
-canvas.height = HEIGHT
-document.body.appendChild(canvas)
+import FontColorPredictor from './FontColorPredictor'
+const TEXT = `Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.`
 
-const context = canvas.getContext('2d')
-
-const DIGONAL_SIZE = 20  // must be odd number
-
-const w = (WIDTH > HEIGHT) ? HEIGHT / parseInt((DIGONAL_SIZE * 1.6)) : WIDTH / parseInt((DIGONAL_SIZE * 1.6))
-const h = (WIDTH > HEIGHT) ? HEIGHT / parseInt((DIGONAL_SIZE * 1.6)) : WIDTH / parseInt((DIGONAL_SIZE * 1.6))
-const BLOCK_MAX_HEIGHT = h * 3
-const p1 = [0. * w, -0.5 * h]
-const p2 = [1. * w, 0. * h]
-const p3 = [0. * w, 0.5 * h]
-const p4 = [-1. * w, 0. * h]
-
-const blocks = []
-const countMap = {}
-for (let r = 0; r <= DIGONAL_SIZE; r++) {
-  const t = Math.sin(r / DIGONAL_SIZE * Math.PI).toFixed(2)
-  let colCount = countMap[t]
-
-  if (!colCount) {
-    const countArr = Object.keys(countMap).map((key) => countMap[key])
-    countMap[t] = (countArr.length == 0) ? 1 : Math.max.apply(null, countArr) + 1
-    colCount = countMap[t]
+const predictor = new FontColorPredictor()
+function getRandomColor() {
+  var letters = '0123456789ABCDEF';
+  var color = '#';
+  for (var i = 0; i < 6; i++) {
+    color += letters[Math.floor(Math.random() * 16)];
   }
+  return color;
+}
 
-  let sc = w * 0.5 -(colCount * w)
-  for (let c = 0; c < colCount; c++) {
-    blocks.push({
-      x: sc + c * w * 2, y: r * h * 0.5
+function hexToRgb(hex) {
+  var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? [
+      parseInt(result[1], 16) / 255.,
+      parseInt(result[2], 16) / 255.,
+      parseInt(result[3], 16) / 255.
+  ] : null;
+}
+
+class Panel {
+  constructor(fontColor, y) {
+    const panel = document.createElement('div')
+  
+    panel.style.width = '400px'
+    panel.style.height = '400px'
+    panel.style.color = fontColor
+    panel.style.float = 'left'
+    panel.style.marginLeft = '20px' 
+    panel.style.overflow = 'hidden'
+    panel.style.padding = '10px'
+    panel.innerHTML = TEXT
+    panel.addEventListener('click', () => {
+      this.selected = true
     })
+    document.body.append(panel)
+    this.ele = panel    
+  }
+  
+  append(parentDom) {
+    parentDom.append(this.ele)
+  }
+
+  changeBackground(bgcolor) {
+    this.bgcolor = bgcolor
+    this.selected = false
+    this.ele.style.background = bgcolor
+  }
+
+  getColor() {
+    return hexToRgb(this.bgcolor)
   }
 }
 
-const r = parseInt(Math.random() * 255)
-const g = parseInt(Math.random() * 255)
-const b = parseInt(Math.random() * 255)
 
-const render = (t) => {
-  context.clearRect(0, 0, WIDTH, HEIGHT)
+const blackFontPanel = new Panel('#000')
+const whiteFontPanel = new Panel('#fff')
 
-  context.save()
-  context.translate(WIDTH * 0.5 + w * 0.25, HEIGHT * 0.5 - DIGONAL_SIZE * 0.25 * h)
+const changePanelBackground = () => {
+  const bgColor = getRandomColor()
+  blackFontPanel.changeBackground(bgColor)
+  whiteFontPanel.changeBackground(bgColor)  
 
-  blocks.forEach(({x, y}, i) => {
-    const h = -(BLOCK_MAX_HEIGHT * 0.3) - (BLOCK_MAX_HEIGHT * 0.7) * Math.abs(Math.sin(0.8 * Math.PI * i / blocks.length + t * 0.004))
+  if (predictor.isTrained) {
+    const [b, w]= predictor.predict(hexToRgb(bgColor))
 
-    context.beginPath()
-    context.moveTo(x + p1[0], y + p1[1] + h)
-    context.lineTo(x + p2[0], y + p2[1] + h)
-    context.lineTo(x + p3[0], y + p3[1] + h)
-    context.lineTo(x + p4[0], y + p4[1] + h)
-    context.closePath()
-    context.fillStyle = `rgb(${r}, ${g}, ${b})`
-    context.fill()
-
-    context.beginPath()
-    context.moveTo(x + p3[0], y + p3[1] + h)
-    context.lineTo(x + p4[0], y + p4[1] + h)
-    context.lineTo(x + p4[0], y + p4[1])
-    context.lineTo(x + p3[0], y + p3[1])
-    context.closePath()
-    context.fillStyle = `rgb(${r - 10}, ${g - 10}, ${b - 10})`
-    context.fill()
-
-    context.beginPath()
-    context.moveTo(x + p2[0], y + p2[1] + h)
-    context.lineTo(x + p2[0], y + p2[1])
-    context.lineTo(x + p3[0], y + p3[1])
-    context.lineTo(x + p3[0], y + p3[1] + h)
-    context.closePath()
-    context.fillStyle = `rgb(${r + 10}, ${g + 10}, ${b + 10})`
-    context.fill()
-  })
-  context.restore()
-  requestAnimationFrame(render)  
+    if(b > w) {
+      blackFontPanel.ele.style.border = '4px solid #000'
+      whiteFontPanel.ele.style.border = '0px solid #000'
+    } else {
+      blackFontPanel.ele.style.border = '0px solid #000'
+      whiteFontPanel.ele.style.border = '4px solid #000'
+    }
+  }
 }
 
-requestAnimationFrame(render)
+
+const dataset = {
+  xs: [],
+  ys: []
+}
+
+changePanelBackground()
+
+blackFontPanel.ele.addEventListener('click', () => {
+  blackFontPanel.selected = true
+  
+  const color = blackFontPanel.getColor()
+  dataset.xs.push(color)
+  dataset.ys.push([1, 0])
+
+  changePanelBackground()
+})
+
+whiteFontPanel.ele.addEventListener('click', () => {
+  whiteFontPanel.selected = true
+  const color = whiteFontPanel.getColor()
+  dataset.xs.push(color)
+  dataset.ys.push([0, 1])  
+  changePanelBackground()
+})
+
+const trainButton = document.createElement('div')
+trainButton.innerText = 'Train'
+trainButton.style.fontFamily = 'sans-serif'
+trainButton.style.padding = '4px'
+trainButton.style.fontSize = '30px'
+trainButton.style.margin = '10px 10px 0px 10px'
+trainButton.style.borderRadius = '10px'
+trainButton.style.display = 'initial'
+trainButton.style.cursor = 'pointer'
+trainButton.addEventListener('click', () => {
+  trainButton.innerHTML = 'tranning...'
+  predictor.learning(dataset).then(() => {
+    predictor.isTrained = true
+    trainButton.innerHTML = 'trained'
+    trainButton.style.cursor = ''
+  })
+})
+
+document.body.appendChild(trainButton)
