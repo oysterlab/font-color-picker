@@ -112,10 +112,10 @@ trainButton.style.borderRadius = '10px'
 trainButton.style.display = 'initial'
 trainButton.style.cursor = 'pointer'
 trainButton.addEventListener('click', () => {
-  trainButton.innerHTML = 'tranning...'
+  trainButton.innerHTML = 'training...'
   predictor.learning(dataset).then(() => {
     predictor.isTrained = true
-    trainButton.innerHTML = 'trained'
+    trainButton.innerHTML = 'done'
     trainButton.style.cursor = ''
   })
 })
